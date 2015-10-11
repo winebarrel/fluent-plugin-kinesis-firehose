@@ -2,6 +2,9 @@
 
 Fluentd output plugin for Amazon Kinesis Firehose.
 
+[![Gem Version](https://badge.fury.io/rb/fluent-plugin-kinesis-firehose.svg)](http://badge.fury.io/rb/fluent-plugin-kinesis-firehose)
+[![Build Status](https://travis-ci.org/winebarrel/fluent-plugin-kinesis-firehose.svg)](https://travis-ci.org/winebarrel/fluent-plugin-kinesis-firehose)
+
 ## Installation
 
 Add this line to your application's Gemfile:
