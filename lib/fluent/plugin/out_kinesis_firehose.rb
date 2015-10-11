@@ -23,6 +23,7 @@ class Fluent::KinesisFirehoseOutput < Fluent::BufferedOutput
   config_param :http_proxy,           :string, :default => nil
   config_param :delivery_stream_name, :string
   config_param :data_key,             :string, :default => nil
+  config_param :append_new_line,      :bool,   :default => true
 
   def initialize
     super
@@ -57,9 +58,15 @@ class Fluent::KinesisFirehoseOutput < Fluent::BufferedOutput
 
   def convert_record_to_data(record)
     if @data_key
-      record[@data_key].to_s
+      data = record[@data_key].to_s
     else
-      MultiJson.dump(record)
+      data = MultiJson.dump(record)
+    end
+
+    if @append_new_line
+      data + "\n"
+    else
+      data
     end
   end
 

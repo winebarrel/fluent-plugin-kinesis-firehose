@@ -39,6 +39,8 @@ Or install it yourself as:
   # {... "data":"xxx" ...}
   # Put a record as JSON if data_key is not set
 
+  #append_new_line true
+
   #include_time_key false
   #include_tag_key false
 
