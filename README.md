@@ -22,7 +22,7 @@ Or install it yourself as:
 
 ```apache
 <match kinesis.data>
-  @type kinesis_firehose
+  type kinesis_firehose
 
   delivery_stream_name DeliveryStreamName
 
