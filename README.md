@@ -41,5 +41,7 @@ Or install it yourself as:
 
   #include_time_key false
   #include_tag_key false
+
+  flush_interval 1s
 </match>
 ```
