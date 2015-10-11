@@ -3,6 +3,9 @@ require "fluent_plugin_kinesis_firehose/version"
 class Fluent::KinesisFirehoseOutput < Fluent::BufferedOutput
   Fluent::Plugin.register_output('kinesis_firehose', self)
 
+  include Fluent::SetTimeKeyMixin
+  include Fluent::SetTagKeyMixin
+
   USER_AGENT_SUFFIX = "fluent-plugin-kinesis-firehose/#{FluentPluginKinesisFirehose::VERSION}"
   PUT_RECORDS_MAX_COUNT = 500
   PUT_RECORDS_MAX_DATA_SIZE = 1024 * 1024 * 4
