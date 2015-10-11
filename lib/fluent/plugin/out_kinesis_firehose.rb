@@ -51,7 +51,9 @@ class Fluent::KinesisFirehoseOutput < Fluent::BufferedOutput
       end
     }.map {|tag, time, record|
       convert_record_to_data(record)
-    }.each_slice(PUT_RECORDS_MAX_COUNT, &method(:put_records))
+    }.each_slice(PUT_RECORDS_MAX_COUNT) {|data_list|
+      put_records(data_list)
+    }
   end
 
   private
@@ -83,7 +85,9 @@ class Fluent::KinesisFirehoseOutput < Fluent::BufferedOutput
       else
         false
       end
-    }.each(&method(:put_record_batch))
+    }.each {|chunk|
+      put_record_batch(chunk)
+    }
   end
 
   def put_record_batch(data_list)
