@@ -37,8 +37,8 @@ describe Fluent::KinesisFirehoseOutput do
       expect(client).to receive(:put_record_batch).with(
         :delivery_stream_name=>"DeliveryStreamName",
          :records=>
-          [{:data=>"{\"key1\":\"foo\",\"key2\":100}\n"},
-           {:data=>"{\"key1\":\"bar\",\"key2\":200}\n"}]
+          [{:data=>%!{"key1":"foo","key2":100}\n!},
+           {:data=>%!{"key1":"bar","key2":200}\n!}]
       )
 
       driver.run do
@@ -55,8 +55,8 @@ describe Fluent::KinesisFirehoseOutput do
       expect(client).to receive(:put_record_batch).with(
         :delivery_stream_name=>"DeliveryStreamName",
          :records=>
-          [{:data=>"{\"key1\":\"foo\",\"key2\":100}"},
-           {:data=>"{\"key1\":\"bar\",\"key2\":200}"}]
+          [{:data=>'{"key1":"foo","key2":100}'},
+           {:data=>'{"key1":"bar","key2":200}'}]
       )
 
       driver.run do
