@@ -39,8 +39,9 @@ Or install it yourself as:
   #data_key data (default: nil)
 
   # Put a data_key value if data_key is set
-  # {... "data":"xxx" ...}
+  #   {... "data":"xxx" ...} -> xxx
   # Put a record as JSON if data_key is not set
+  #   {... "data":"xxx" ...} -> {... "data":"xxx" ...}
 
   #append_new_line true
 
