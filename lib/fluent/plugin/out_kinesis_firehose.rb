@@ -16,8 +16,8 @@ class Fluent::KinesisFirehoseOutput < Fluent::BufferedOutput
 
   config_param :profile,              :string, :default => nil
   config_param :credentials_path,     :string, :default => nil
-  config_param :aws_key_id,           :string, :default => nil
-  config_param :aws_sec_key,          :string, :default => nil
+  config_param :aws_key_id,           :string, :default => nil, :secret => true
+  config_param :aws_sec_key,          :string, :default => nil, :secret => true
   config_param :region,               :string, :default => nil
   config_param :endpoint,             :string, :default => nil
   config_param :http_proxy,           :string, :default => nil
