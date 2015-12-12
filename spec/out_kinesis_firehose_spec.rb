@@ -125,15 +125,15 @@ describe Fluent::KinesisFirehoseOutput do
              {:data=>%!{"key1":"bar","key2":200}\n!}]
         ).and_return(response)
 
-        expect(log).to receive(:warn).with('Retrying to put records. Retry count: 1')
-        expect(log).to_not receive(:error)
-
         expect(client).to receive(:put_record_batch).with(
           :delivery_stream_name=>"DeliveryStreamName",
            :records=>
             [{:data=>%!{"key1":"foo","key2":100}\n!},
              {:data=>%!{"key1":"bar","key2":200}\n!}]
         ).and_return({})
+
+        expect(log).to receive(:warn).with('Retrying to put records. Retry count: 1')
+        expect(log).to_not receive(:error)
 
         driver.run do
           driver.emit({'key1' => 'foo', 'key2' => 100}, time)
