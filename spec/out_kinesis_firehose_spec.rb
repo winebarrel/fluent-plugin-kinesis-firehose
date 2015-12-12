@@ -32,69 +32,137 @@ describe Fluent::KinesisFirehoseOutput do
     allow(driver.instance).to receive(:client) { client }
   end
 
-  context 'when events is sent' do
-    specify do
-      expect(client).to receive(:put_record_batch).with(
-        :delivery_stream_name=>"DeliveryStreamName",
-         :records=>
-          [{:data=>%!{"key1":"foo","key2":100}\n!},
-           {:data=>%!{"key1":"bar","key2":200}\n!}]
-      )
+  context 'without retry' do
+    before do
+      expect(log).to_not receive(:error)
+    end
 
-      driver.run do
-        driver.emit({'key1' => 'foo', 'key2' => 100}, time)
-        driver.emit({'key1' => 'bar', 'key2' => 200}, time)
+    context 'when events is sent' do
+      specify do
+        expect(client).to receive(:put_record_batch).with(
+          :delivery_stream_name=>"DeliveryStreamName",
+           :records=>
+            [{:data=>%!{"key1":"foo","key2":100}\n!},
+             {:data=>%!{"key1":"bar","key2":200}\n!}]
+        ).and_return({})
+
+        driver.run do
+          driver.emit({'key1' => 'foo', 'key2' => 100}, time)
+          driver.emit({'key1' => 'bar', 'key2' => 200}, time)
+        end
+      end
+    end
+
+    context 'when events is sent without append_new_line' do
+      let(:additional_fluentd_conf) { 'append_new_line false' }
+
+      specify do
+        expect(client).to receive(:put_record_batch).with(
+          :delivery_stream_name=>"DeliveryStreamName",
+           :records=>
+            [{:data=>'{"key1":"foo","key2":100}'},
+             {:data=>'{"key1":"bar","key2":200}'}]
+        ).and_return({})
+
+        driver.run do
+          driver.emit({'key1' => 'foo', 'key2' => 100}, time)
+          driver.emit({'key1' => 'bar', 'key2' => 200}, time)
+        end
+      end
+    end
+
+    context 'when events is sent with data_key' do
+      let(:additional_fluentd_conf) { 'data_key data' }
+
+      specify do
+        expect(client).to receive(:put_record_batch).with(
+          :delivery_stream_name=>"DeliveryStreamName",
+           :records=>
+            [{:data=>"foo\n"},
+             {:data=>"200\n"}]
+        ).and_return({})
+
+        driver.run do
+          driver.emit({'data' => 'foo', 'key2' => 100}, time)
+          driver.emit({'key1' => 'bar', 'data' => 200}, time)
+        end
+      end
+    end
+
+    context 'when events is sent without data_key' do
+      let(:additional_fluentd_conf) { 'data_key data' }
+
+      specify do
+        expect(client).to_not receive(:put_record_batch)
+        expect(log).to receive(:warn).with(%!'data' key does not exist: ["test.default", 1441070625, {"key1"=>"foo", "key2"=>100}]!)
+        expect(log).to receive(:warn).with(%!'data' key does not exist: ["test.default", 1441070625, {"key1"=>"bar", "key2"=>200}]!)
+
+        driver.run do
+          driver.emit({'key1' => 'foo', 'key2' => 100}, time)
+          driver.emit({'key1' => 'bar', 'key2' => 200}, time)
+        end
       end
     end
   end
 
-  context 'when events is sent without append_new_line' do
-    let(:additional_fluentd_conf) { 'append_new_line false' }
+  context 'when events is sent with retry' do
+    let(:response) do
+      {
+        failed_put_count: 1,
+        request_responses: [
+          {error_code: 'ERROR1', error_message: 'MESSAGE1'},
+          {error_code: 'ERROR2', error_message: 'MESSAGE2'}
+        ]
+      }
+    end
 
-    specify do
-      expect(client).to receive(:put_record_batch).with(
-        :delivery_stream_name=>"DeliveryStreamName",
-         :records=>
-          [{:data=>'{"key1":"foo","key2":100}'},
-           {:data=>'{"key1":"bar","key2":200}'}]
-      )
+    context 'when retry success' do
+      specify do
+        expect(client).to receive(:put_record_batch).with(
+          :delivery_stream_name=>"DeliveryStreamName",
+           :records=>
+            [{:data=>%!{"key1":"foo","key2":100}\n!},
+             {:data=>%!{"key1":"bar","key2":200}\n!}]
+        ).and_return(response)
 
-      driver.run do
-        driver.emit({'key1' => 'foo', 'key2' => 100}, time)
-        driver.emit({'key1' => 'bar', 'key2' => 200}, time)
+        expect(log).to receive(:warn).with('Retrying to put records. Retry count: 1')
+        expect(log).to_not receive(:error)
+
+        expect(client).to receive(:put_record_batch).with(
+          :delivery_stream_name=>"DeliveryStreamName",
+           :records=>
+            [{:data=>%!{"key1":"foo","key2":100}\n!},
+             {:data=>%!{"key1":"bar","key2":200}\n!}]
+        ).and_return({})
+
+        driver.run do
+          driver.emit({'key1' => 'foo', 'key2' => 100}, time)
+          driver.emit({'key1' => 'bar', 'key2' => 200}, time)
+        end
       end
     end
-  end
 
-  context 'when events is sent with data_key' do
-    let(:additional_fluentd_conf) { 'data_key data' }
-
-    specify do
-      expect(client).to receive(:put_record_batch).with(
-        :delivery_stream_name=>"DeliveryStreamName",
-         :records=>
-          [{:data=>"foo\n"},
-           {:data=>"200\n"}]
-      )
-
-      driver.run do
-        driver.emit({'data' => 'foo', 'key2' => 100}, time)
-        driver.emit({'key1' => 'bar', 'data' => 200}, time)
+    context 'when retry failed' do
+      let(:additional_fluentd_conf) do
+        'retries_on_putrecordbatch 0'
       end
-    end
-  end
 
-  context 'when events is sent without data_key' do
-    let(:additional_fluentd_conf) { 'data_key data' }
+      specify do
+        expect(client).to receive(:put_record_batch).with(
+          :delivery_stream_name=>"DeliveryStreamName",
+           :records=>
+            [{:data=>%!{"key1":"foo","key2":100}\n!},
+             {:data=>%!{"key1":"bar","key2":200}\n!}]
+        ).and_return(response)
 
-    specify do
-      expect(client).to_not receive(:put_record_batch)
-      expect(log).to receive(:warn).with(%!'data' key does not exist: ["test.default", 1441070625, {"key1"=>"foo", "key2"=>100}]!)
-      expect(log).to receive(:warn).with(%!'data' key does not exist: ["test.default", 1441070625, {"key1"=>"bar", "key2"=>200}]!)
+        expect(log).to_not receive(:warn)
+        expect(log).to receive(:error).with(%!Could not put record, Error: ERROR1/MESSAGE1, Record: {"key1":"foo","key2":100}\n!)
+        expect(log).to receive(:error).with(%!Could not put record, Error: ERROR2/MESSAGE2, Record: {"key1":"bar","key2":200}\n!)
 
-      driver.run do
-        driver.emit({'key1' => 'foo', 'key2' => 100}, time)
-        driver.emit({'key1' => 'bar', 'key2' => 200}, time)
+        driver.run do
+          driver.emit({'key1' => 'foo', 'key2' => 100}, time)
+          driver.emit({'key1' => 'bar', 'key2' => 200}, time)
+        end
       end
     end
   end

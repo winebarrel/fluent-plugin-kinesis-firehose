@@ -14,17 +14,17 @@ class Fluent::KinesisFirehoseOutput < Fluent::BufferedOutput
     define_method('log') { $log }
   end
 
-  config_param :profile,              :string, :default => nil
-  config_param :credentials_path,     :string, :default => nil
-  config_param :aws_key_id,           :string, :default => nil, :secret => true
-  config_param :aws_sec_key,          :string, :default => nil, :secret => true
-  config_param :region,               :string, :default => nil
-  config_param :endpoint,             :string, :default => nil
-  config_param :http_proxy,           :string, :default => nil
-  config_param :delivery_stream_name, :string
-  config_param :data_key,             :string, :default => nil
-  config_param :append_new_line,      :bool,   :default => true
-  config_param :retries_on_putrecordbatch,  :integer,:default => 3
+  config_param :profile,                   :string,  :default => nil
+  config_param :credentials_path,          :string,  :default => nil
+  config_param :aws_key_id,                :string,  :default => nil, :secret => true
+  config_param :aws_sec_key,               :string,  :default => nil, :secret => true
+  config_param :region,                    :string,  :default => nil
+  config_param :endpoint,                  :string,  :default => nil
+  config_param :http_proxy,                :string,  :default => nil
+  config_param :delivery_stream_name,      :string
+  config_param :data_key,                  :string,  :default => nil
+  config_param :append_new_line,           :bool,    :default => true
+  config_param :retries_on_putrecordbatch, :integer, :default => 3
 
   def initialize
     super
@@ -34,6 +34,7 @@ class Fluent::KinesisFirehoseOutput < Fluent::BufferedOutput
 
   def configure(conf)
     super
+    @sleep_duration = Array.new(@retries_on_putrecordbatch) {|n| ((2 ** n) * scaling_factor) }
   end
 
   def format(tag, time, record)
@@ -55,6 +56,9 @@ class Fluent::KinesisFirehoseOutput < Fluent::BufferedOutput
     }.each_slice(PUT_RECORDS_MAX_COUNT) {|data_list|
       put_records(data_list)
     }
+  rescue => e
+    log.error e.message
+    log.error_backtrace e.backtrace
   end
 
   private
@@ -102,29 +106,39 @@ class Fluent::KinesisFirehoseOutput < Fluent::BufferedOutput
     )
 
     if response[:failed_put_count] && response[:failed_put_count] > 0
-      failed_records = []
-      response[:request_responses].each_with_index{|record, index|
-        if record[:error_code]
-          failed_records.push({body: records[index], error_code: record[:error_code]})
-        end
-      }
+      failed_records = collect_failed_records(data_list, response)
 
       if retry_count < @retries_on_putrecordbatch
-        sleep(calculate_sleep_duration(retry_count))
+        sleep @sleep_duration[retry_count]
         retry_count += 1
-        log.warn sprintf('Retrying to put records. Retry count: %d', retry_count)
-        put_record_batch_with_retry(failed_records.map{|record| record[:body]}, retry_count)
+        log.warn 'Retrying to put records. Retry count: %d' % retry_count
+        put_record_batch_with_retry(failed_records.map{|record| record[:data] }, retry_count)
       else
-        failed_records.each{|record|
-          log.error sprintf(
-                        'Could not put record, Error: %s, Record: %s',
-                        record[:error_code],
-                        JSON.dump(record[:body])
-                    )
+        failed_records.each {|record|
+          log.error 'Could not put record, Error: %s/%s, Record: %s' % [
+            record[:error_code],
+            record[:error_message],
+            record[:data]
+          ]
         }
       end
-
     end
+  end
+
+  def collect_failed_records(data_list, response)
+    failed_records = []
+
+    response[:request_responses].each_with_index do |record, index|
+      if record[:error_code]
+        failed_records.push(
+          data: data_list[index],
+          error_code: record[:error_code],
+          error_message: record[:error_message]
+        )
+      end
+    end
+
+    failed_records
   end
 
   def client
@@ -154,11 +168,7 @@ class Fluent::KinesisFirehoseOutput < Fluent::BufferedOutput
     @client = Aws::Firehose::Client.new(options)
   end
 
-  def calculate_sleep_duration(current_retry)
-    Array.new(@retries_on_putrecordbatch){|n| ((2 ** n) * scaling_factor)}[current_retry]
-  end
-
   def scaling_factor
-    0.5 + Kernel.rand * 0.1
+    0.5 + rand * 0.1
   end
 end
