@@ -35,6 +35,7 @@ Or install it yourself as:
   #aws_sec_key ...
   region us-east-1
   #endpoint ...
+  #retries_on_putrecordbatch 3
 
   #data_key data (default: nil)
 
