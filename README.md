@@ -5,6 +5,11 @@ Fluentd output plugin for Amazon Kinesis Firehose.
 [![Gem Version](https://badge.fury.io/rb/fluent-plugin-kinesis-firehose.svg)](http://badge.fury.io/rb/fluent-plugin-kinesis-firehose)
 [![Build Status](https://travis-ci.org/winebarrel/fluent-plugin-kinesis-firehose.svg)](https://travis-ci.org/winebarrel/fluent-plugin-kinesis-firehose)
 
+## ChangeLog
+
+* `>= 0.1.2`
+  * Add `retries_on_putrecordbatch` option ([PR#2](https://github.com/winebarrel/fluent-plugin-kinesis-firehose/pull/3))
+
 ## Installation
 
 Add this line to your application's Gemfile:
