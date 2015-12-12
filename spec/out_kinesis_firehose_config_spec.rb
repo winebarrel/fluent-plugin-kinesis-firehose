@@ -26,6 +26,7 @@ describe 'Fluent::KinesisFirehoseOutput#configure' do
       expect(driver.instance.delivery_stream_name).to eq 'DeliveryStreamName'
       expect(driver.instance.data_key).to be_nil
       expect(driver.instance.append_new_line).to be_truthy
+      expect(driver.instance.retries_on_putrecordbatch).to eq 3
     end
   end
 
@@ -43,6 +44,7 @@ describe 'Fluent::KinesisFirehoseOutput#configure' do
         http_proxy HTTP_PROXY
         data_key data
         append_new_line false
+        retries_on_putrecordbatch 4
       EOS
     end
 
@@ -57,6 +59,7 @@ describe 'Fluent::KinesisFirehoseOutput#configure' do
       expect(driver.instance.delivery_stream_name).to eq 'DeliveryStreamName2'
       expect(driver.instance.data_key).to eq 'data'
       expect(driver.instance.append_new_line).to be_falsey
+      expect(driver.instance.retries_on_putrecordbatch).to eq 4
     end
   end
 end
