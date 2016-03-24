@@ -25,6 +25,7 @@ class Fluent::KinesisFirehoseOutput < Fluent::BufferedOutput
   config_param :data_key,                  :string,  :default => nil
   config_param :append_new_line,           :bool,    :default => true
   config_param :retries_on_putrecordbatch, :integer, :default => 3
+  config_param :local_path_fallback,       :string,  :default => nil
 
   def initialize
     super
@@ -121,6 +122,12 @@ class Fluent::KinesisFirehoseOutput < Fluent::BufferedOutput
             record[:data]
           ]
         }
+
+        if not @local_path_fallback.nil?
+          File.open(@local_path_fallback, 'a') { |f|
+            failed_records.each { |record| f.write record[:data] }
+          }
+        end
       end
     end
   end

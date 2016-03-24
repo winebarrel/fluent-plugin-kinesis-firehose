@@ -27,6 +27,7 @@ describe 'Fluent::KinesisFirehoseOutput#configure' do
       expect(driver.instance.data_key).to be_nil
       expect(driver.instance.append_new_line).to be_truthy
       expect(driver.instance.retries_on_putrecordbatch).to eq 3
+      expect(driver.instance.local_path_fallback).to be_nil
     end
   end
 
@@ -45,6 +46,7 @@ describe 'Fluent::KinesisFirehoseOutput#configure' do
         data_key data
         append_new_line false
         retries_on_putrecordbatch 4
+        local_path_fallback /path/to/local/file
       EOS
     end
 
@@ -60,6 +62,7 @@ describe 'Fluent::KinesisFirehoseOutput#configure' do
       expect(driver.instance.data_key).to eq 'data'
       expect(driver.instance.append_new_line).to be_falsey
       expect(driver.instance.retries_on_putrecordbatch).to eq 4
+      expect(driver.instance.local_path_fallback).to eq '/path/to/local/file'
     end
   end
 end
