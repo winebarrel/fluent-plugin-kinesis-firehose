@@ -3,6 +3,10 @@ describe Fluent::KinesisFirehoseOutput do
     Time.parse('2015-09-01 01:23:45 UTC').to_i
   end
 
+  let(:fallback_file) do
+    StringIO.new
+  end
+
   let(:default_fluentd_conf) do
     <<-EOS
       type kinesis_firehose
@@ -158,6 +162,40 @@ describe Fluent::KinesisFirehoseOutput do
         expect(log).to_not receive(:warn)
         expect(log).to receive(:error).with(%!Could not put record, Error: ERROR1/MESSAGE1, Record: {"key1":"foo","key2":100}\n!)
         expect(log).to receive(:error).with(%!Could not put record, Error: ERROR2/MESSAGE2, Record: {"key1":"bar","key2":200}\n!)
+
+        driver.run do
+          driver.emit({'key1' => 'foo', 'key2' => 100}, time)
+          driver.emit({'key1' => 'bar', 'key2' => 200}, time)
+        end
+      end
+    end
+
+    context 'when retry failed and local_path_fallback' do
+      let(:additional_fluentd_conf) do
+        <<-EOS
+          retries_on_putrecordbatch 0
+          local_path_fallback /path/to/local/fallback
+        EOS
+      end
+
+      before do
+        allow(File).to receive(:open).with("/path/to/local/fallback", "a").and_yield(fallback_file)
+      end
+
+      specify do
+        expect(client).to receive(:put_record_batch).with(
+          :delivery_stream_name=>"DeliveryStreamName",
+           :records=>
+            [{:data=>%!{"key1":"foo","key2":100}\n!},
+             {:data=>%!{"key1":"bar","key2":200}\n!}]
+        ).and_return(response)
+
+        expect(log).to_not receive(:warn)
+        expect(log).to receive(:error).with(%!Could not put record, Error: ERROR1/MESSAGE1, Record: {"key1":"foo","key2":100}\n!)
+        expect(log).to receive(:error).with(%!Could not put record, Error: ERROR2/MESSAGE2, Record: {"key1":"bar","key2":200}\n!)
+
+        expect(fallback_file).to receive(:write).with(%!{"key1":"foo","key2":100}\n!)
+        expect(fallback_file).to receive(:write).with(%!{"key1":"bar","key2":200}\n!)
 
         driver.run do
           driver.emit({'key1' => 'foo', 'key2' => 100}, time)
