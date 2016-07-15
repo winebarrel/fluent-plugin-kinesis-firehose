@@ -4,7 +4,7 @@ Fluentd output plugin for Amazon Kinesis Firehose.
 
 ![](https://img.shields.io/badge/stabillity-deprecated-red.svg)
 
-**Please use [fluent-plugin-kinesis](https://github.com/awslabs/aws-fluent-plugin-kinesis)**
+**Please use [fluent-plugin-kinesis](https://github.com/awslabs/aws-fluent-plugin-kinesis).**
 
 [![Gem Version](https://badge.fury.io/rb/fluent-plugin-kinesis-firehose.svg)](http://badge.fury.io/rb/fluent-plugin-kinesis-firehose)
 [![Build Status](https://travis-ci.org/winebarrel/fluent-plugin-kinesis-firehose.svg)](https://travis-ci.org/winebarrel/fluent-plugin-kinesis-firehose)
